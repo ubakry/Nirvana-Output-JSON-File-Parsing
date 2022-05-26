@@ -5,12 +5,14 @@ AUTHOR="Copyright 2022 Usama Bakry (u.bakry@icloud.com)"
 
 ## Command line options
 ## -----------------------------------------------------------------------------
-while getopts i:o: OPTION
+while getopts i:g:o: OPTION
 do
 case "${OPTION}"
 in
 # Input directory
 i) INPUT=${OPTARG};;
+# Genes file
+g) GENE_LIST=${OPTARG};;
 # Output directory
 o) OUTPUT=${OPTARG};;
 esac
@@ -66,11 +68,18 @@ echo -e "[      OK     ] Output directory is ready on ${OUTPUT}/\n"
 time {
 echo -e "[   PROCESS   ] Extract genes..."
 
+echo -e "SAMPLE\tCOUNT\tGENES" >> ${OUTPUT}/Output.tsv
+
 FILES=$(ls ${INPUT} | grep ".json")
 for FILE in $FILES; do
     PREFIX=$(basename "$FILE" | cut -d. -f1)
 
-    time jq '.genes | .[] |.name' ${INPUT}/${FILE} > ${OUTPUT}/${PREFIX}.genes
+    time jq '.genes | .[] |.name' ${INPUT}/${FILE} | sed 's/\"//g' | sort > ${OUTPUT}/${PREFIX}.genes 
+    GENES=`comm -12 ${GENE_LIST} ${OUTPUT}/${PREFIX}.genes | sed 's/ /\n/g'`
+    COUNT=`echo ${GENES} | sed 's/ /\n/g' | wc -l`
+    GENE_LST=`echo ${GENES} | sed 's/ /, /g'`
+
+    echo -e "${PREFIX}\t${COUNT}\t${GENE_LST}" >> ${OUTPUT}/Output.tsv    
 
 done
 
